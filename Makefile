@@ -1,8 +1,9 @@
-REGISTRY = <docker-registry-url>
-PROJECT = <project-name>
+REGISTRY = norbega
+PROJECT = eraser
 VERSION = v1beta1
-GIT_URL = <repository-url>
-BASE_REPO = <repo-name>
+GIT_URL = github.com/igarridot
+BASE_REPO = learning-k8s-crds
+KIND = Environment
 
 install-kubebuilder:
 	curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$$(go env GOOS)/$$(go env GOARCH)
@@ -12,7 +13,7 @@ kubebuilder-init-project:
 	mkdir -p ${PROJECT}
 	cd ${PROJECT} && kubebuilder init --domain ${BASE_REPO} --repo ${GIT_URL}/${BASE_REPO}/${PROJECT}
 kubebuilder-create-api:
-	cd ${PROJECT} && kubebuilder create api --group learning-k8s-crds --version ${VERSION} --kind Environment --controller --resource
+	cd ${PROJECT} && kubebuilder create api --group learning-k8s-crds --version ${VERSION} --kind ${KIND} --controller --resource
 apply-cr-manifests:
 	kubectl apply -f ${PROJECT}/config/samples/
 apply-crd-components:
