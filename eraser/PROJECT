@@ -1,0 +1,16 @@
+domain: learning-k8s-crds
+layout:
+- go.kubebuilder.io/v3
+projectName: eraser
+repo: github.com/igarridot/learning-k8s-crds/eraser
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: learning-k8s-crds
+  group: learning-k8s-crds
+  kind: Environment
+  path: github.com/igarridot/learning-k8s-crds/eraser/api/v1beta2
+  version: v1beta2
+version: "3"
