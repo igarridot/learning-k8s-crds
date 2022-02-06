@@ -1,6 +1,6 @@
 REGISTRY = norbega
 PROJECT = eraser
-VERSION = v1beta1
+VERSION = v1beta2
 GIT_URL = github.com/igarridot
 BASE_REPO = learning-k8s-crds
 KIND = Environment
