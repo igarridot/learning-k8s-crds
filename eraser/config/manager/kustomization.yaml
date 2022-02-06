@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: norbega/eraser
-  newTag: v1beta1
+  newTag: v1beta2
