@@ -18,13 +18,15 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
+	learningk8scrdsv1beta2 "github.com/igarridot/learning-k8s-crds/eraser/api/v1beta2"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	learningk8scrdsv1beta2 "github.com/igarridot/learning-k8s-crds/eraser/api/v1beta2"
 )
 
 // EnvironmentReconciler reconciles a Environment object
@@ -36,27 +38,69 @@ type EnvironmentReconciler struct {
 //+kubebuilder:rbac:groups=learning-k8s-crds.learning-k8s-crds,resources=environments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=learning-k8s-crds.learning-k8s-crds,resources=environments/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=learning-k8s-crds.learning-k8s-crds,resources=environments/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources="namespaces",verbs="*"
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Environment object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var environment learningk8scrdsv1beta2.Environment
+	if err := r.Get(ctx, req.NamespacedName, &environment); err != nil {
+		fmt.Println(err, "unable to fetch environment")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	var childnamespaces corev1.NamespaceList
+	if err := r.List(ctx, &childnamespaces, client.InNamespace(req.Namespace), client.MatchingFields{namespaceOwnerKey: req.Name}); err != nil {
+		fmt.Println(err, "unable to list child namespaces")
+		return ctrl.Result{}, err
+	}
+
+	constructNamespaceForEnvironment := func(environment *learningk8scrdsv1beta2.Environment) (*corev1.Namespace, error) {
+
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: environment.Name,
+			},
+		}
+
+		return namespace, nil
+	}
+
+	namespace, err := constructNamespaceForEnvironment(&environment)
+	if err != nil {
+		fmt.Println(err, "unable to construct namespace from template")
+		return ctrl.Result{}, nil
+	}
+	if err := r.Create(ctx, namespace); err != nil {
+		fmt.Println(err, "unable to create namespace for environment", "namespace", namespace)
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
+var (
+	namespaceOwnerKey = ".metadata.controller"
+	apiGVStr          = learningk8scrdsv1beta2.GroupVersion.String()
+)
+
 func (r *EnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Namespace{}, namespaceOwnerKey, func(rawObj client.Object) []string {
+		namespace := rawObj.(*corev1.Namespace)
+		owner := metav1.GetControllerOf(namespace)
+		if owner == nil {
+			return nil
+		}
+		if owner.APIVersion != apiGVStr || owner.Kind != "Environment" {
+			return nil
+		}
+
+		return []string{owner.Name}
+	}); err != nil {
+		return err
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&learningk8scrdsv1beta2.Environment{}).
+		Owns(&corev1.Namespace{}).
 		Complete(r)
 }

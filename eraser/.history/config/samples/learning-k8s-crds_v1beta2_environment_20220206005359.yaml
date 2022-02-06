@@ -1,6 +1,0 @@
-apiVersion: learning-k8s-crds.learning-k8s-crds/v1beta2
-kind: Environment
-metadata:
-  name: environment-sample
-spec:
-  name: environment-sample 
